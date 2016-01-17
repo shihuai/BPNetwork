@@ -25,28 +25,33 @@ typedef struct outputNode{
 class BPNetwork{
 
 public:
-	BPNetwork(BPNetParam &param, vector<vector<double> > &inputSample, vector<vector<double> > &outputValue);
-	void initialInput(vector<vector<double> > &inputSample);
-	void initialOutput(vector<vector<double> > &outputValue);
+	BPNetwork(BPNetParam &, vector<vector<double> > &, vector<vector<double> > &);
+	void initialInput(vector<vector<double> > &);
+	void initialOutput(vector<vector<double> > &);
 	void initialWeight();
 	void constructNetork();
 	void calculateOutput();
+	void calculateHideToHideOutput(int , int);
+	void calculateHideToOutput(int );
 	void calculateDelta();
 	void adjustBPWeight();
 	void train(int , double);
 
 private:
-	BPNetParam bpNetParam;
-	//double 
-	vector<vector<double> > samples;
-	vector<vector<double> > expectOuput;
-	vector<vector<double> > realOutput;
+	double limitValue_0_1(double);
+
+private:
+	BPNetParam					bpNetParam;
+	vector<vector<double> >		samples;
+	vector<vector<double> >		expectOuput;
+	vector<vector<double> >		realOutput;
+	vector<Weight>				hideToOutputLayerDeltaWeight;
+	vector<Weight>				hideToOutputWeight;
+	vector<Weight>				hideToOutputLayerTempWeight;
+	vector<vector<double> >		hideToOutputDelta;
 	vector<vector<OutputNode> > hideLayerOutput;
-	vector<vector<double> > outputLayerDelta;
-	vector<vector<Node> > hideLayerDelta;
-	vector<vector<Node> > outputLayerTempWeight;
-	vector<vector<Node> > hideLayerTempWeight;
-	vector<vector<Weight> > hideLayerWeight;
-	vector<Weight> hideToOutputWeight;
-	//vector<vector<>>
+	vector<vector<OutputNode> > hideLayerOutputDelta;
+	vector<vector<Weight> >		hideLayerTempWeight;
+	vector<vector<Weight> >		hideLayerDelta;
+	vector<vector<Weight> >		hideLayerWeight;
 };
