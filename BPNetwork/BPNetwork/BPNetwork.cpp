@@ -2,12 +2,16 @@
 #include <cstdlib>
 #include <time.h>
 
+BPNetwork::BPNetwork()
+{}
+
 BPNetwork::BPNetwork(BPNetParam &param, vector<vector<double> > &inputSample, vector<vector<double> > &outputValue)
 {
 	bpNetParam.sampleNum	= param.sampleNum;
 	bpNetParam.nInputNodes	= param.nInputNodes;
 	bpNetParam.nOutPutNodes = param.nOutPutNodes;
 	bpNetParam.nHideLayers	= param.nHideLayers;
+	bpNetParam.neda			= param.neda;
 	
 	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
 	{
@@ -19,89 +23,95 @@ BPNetwork::BPNetwork(BPNetParam &param, vector<vector<double> > &inputSample, ve
 	initialOutput(outputValue);
 	initialWeight();
 }
-
-void BPNetwork::constructNetork()
+//***************构建输入节点******************************//
+void BPNetwork::buildInputNodes()
 {
-	//***************构建输入节点**********************//
 	for(int i = 0; i < bpNetParam.sampleNum; ++ i)
 	{
 		vector<double> tempSampleInput(bpNetParam.nInputNodes + 1);
 
 		samples.push_back(tempSampleInput);
 	}
-
-	//**************构建隐藏层节点的输出节点********************//
+}
+//**************构建隐藏层节点的输出节点********************//
+void BPNetwork::buildHideLayerNodes()
+{
 	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
 	{
 		vector<OutputNode> tempOutputNode(bpNetParam.sampleNum);
+		vector<OutputNode> tempHideLayerDelta(bpNetParam.sampleNum);
 
 		for(int j = 0; j < bpNetParam.sampleNum; ++ j)
 		{
-			tempOutputNode[j].data = new double[bpNetParam.nHideLayerNodes[i]];
+			tempOutputNode[j].data		= new double[bpNetParam.nHideLayerNodes[i]];
+			tempHideLayerDelta[j].data	= new double[bpNetParam.nHideLayerNodes[i]];
 		}
 
 		hideLayerOutput.push_back(tempOutputNode);
+		hideLayerOutputDelta.push_back(tempHideLayerDelta);
 	}
-
-	//**************构建输出层的输出节点************************//
+}
+//**************构建输出层的输出节点************************//
+void BPNetwork::buildOutputLayerNodes()
+{
 	for(int i = 0; i < bpNetParam.sampleNum; ++ i)
 	{
 		vector<double> tempRealOutput(bpNetParam.nOutPutNodes);
 		vector<double> tempExpectOutput(bpNetParam.nOutPutNodes);
+		vector<double> tempOutputLayerDelta(bpNetParam.nOutPutNodes);
 		
 		realOutput.push_back(tempRealOutput);
 		expectOuput.push_back(tempExpectOutput);
+		hideToOutputDelta.push_back(tempOutputLayerDelta);
 	}
-
-	//*************构建输入层一直到最后隐层的权值链接********//
+}
+//*************构建输入层一直到最后隐层的权值链接************//
+void BPNetwork::buildHideToHideWeight()
+{
 	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
 	{
 		vector<Weight> tempHideLayerWeight(bpNetParam.nHideLayerNodes[i] + 1);
-		vector<Weight> tempHideLayerWTemp(bpNetParam.nHideLayerNodes[i] + 1);
-		vector<Weight> tempHideLayerDelta(bpNetParam.nHideLayerNodes[i] + 1);
 
 		if(i == 0)
 		{
 			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
 			{
-				tempHideLayerWeight[j].W	= new double[bpNetParam.nInputNodes + 1];
-				tempHideLayerWTemp[j].W		= new double[bpNetParam.nInputNodes + 1];
-				tempHideLayerDelta[j].W		= new double[bpNetParam.nInputNodes + 1];
+				tempHideLayerWeight[j].W = new double[bpNetParam.nInputNodes + 1];
 			}                                                                                                    
 		}
 		else
 		{
 			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
 			{
-				tempHideLayerWeight[j].W	= new double[bpNetParam.nHideLayerNodes[i - 1] + 1];
-				tempHideLayerWTemp[j].W		= new double[bpNetParam.nHideLayerNodes[i - 1] + 1];
-				tempHideLayerDelta[j].W		= new double[bpNetParam.nHideLayerNodes[i - 1] + 1];
+				tempHideLayerWeight[j].W = new double[bpNetParam.nHideLayerNodes[i - 1] + 1];
 			}
 		}
 
 		hideLayerWeight.push_back(tempHideLayerWeight);
-		hideLayerTempWeight.push_back(tempHideLayerWTemp);
-		hideLayerDelta.push_back(tempHideLayerDelta);
 	}
-
-	//******************构建最后隐层到输出层的权值链接*********//
+}
+//******************构建最后隐层到输出层的权值链接***********//
+void BPNetwork::buildHideToOutputWeight()
+{
 	for(int i = 0; i < bpNetParam.nOutPutNodes; ++ i)
 	{
 		Weight tempHideToOutputWeight;
-		Weight tempHideToOutputTempWeight;
-		Weight tempHideToOutputDelta;
 		
-		tempHideToOutputWeight.W		= new double[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1] + 1];
-		tempHideToOutputTempWeight.W	= new double[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1] + 1];
-		tempHideToOutputDelta.W			= new double[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1] + 1];
+		tempHideToOutputWeight.W = new double[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1] + 1];
 
 		hideToOutputWeight.push_back(tempHideToOutputWeight);
-		hideToOutputLayerTempWeight.push_back(tempHideToOutputTempWeight);
-		hideToOutputLayerDeltaWeight.push_back(tempHideToOutputDelta);
 	}
-
 }
-
+//******************开始构建BP网络*************************//
+void BPNetwork::constructNetork()
+{
+	buildInputNodes();
+	buildHideLayerNodes();
+	buildOutputLayerNodes();
+	buildHideToHideWeight();
+	buildHideToOutputWeight();
+}
+//*****************初始化输入节点**************************//
 void BPNetwork::initialInput(vector<vector<double> > &inputSample)
 {
 	for(int i = 0; i < bpNetParam.sampleNum; ++ i)
@@ -112,7 +122,7 @@ void BPNetwork::initialInput(vector<vector<double> > &inputSample)
 		}
 	}
 }
-
+//*****************初始化期望输出节点**********************//
 void BPNetwork::initialOutput(vector<vector<double> > &outputValue)
 {
 	for(int i = 0; i < bpNetParam.sampleNum; ++ i)
@@ -123,7 +133,7 @@ void BPNetwork::initialOutput(vector<vector<double> > &outputValue)
 		}
 	}
 }
-
+//*****************初始化整个网络的权值********************//
 void BPNetwork::initialWeight()
 {
 	srand((unsigned)time(NULL));
@@ -136,18 +146,14 @@ void BPNetwork::initialWeight()
 			{
 				for(int k = 0; k <= bpNetParam.nInputNodes; ++ k)
 				{
-					hideLayerWeight[i][j].W[k]		= rand() % 100 * 0.01;
-					hideLayerTempWeight[i][j].W[k]	= 0.0;
-					hideLayerDelta[i][j].W[k]		= 0.0;
+					hideLayerWeight[i][j].W[k] = rand() % 100 * 0.01;
 				}
 			}
 			else
 			{
 				for(int k = 0; k <= bpNetParam.nHideLayerNodes[i - 1]; ++ k)
 				{
-					hideLayerWeight[i][j].W[k]		= rand() % 100 * 0.01;
-					hideLayerTempWeight[i][j].W[k]	= 0.0;
-					hideLayerDelta[i][j].W[k]		= 0.0;
+					hideLayerWeight[i][j].W[k] = rand() % 100 * 0.01;
 				}
 			}
 		}
@@ -157,13 +163,11 @@ void BPNetwork::initialWeight()
 	{
 		for(int j = 0; j <= bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ j)
 		{
-			hideToOutputWeight[i].W[j]				= rand() % 100 * 0.01;
-			hideToOutputLayerTempWeight[i].W[j]		= 0.0;
-			hideToOutputLayerDeltaWeight[i].W[j]	= 0.0;
+			hideToOutputWeight[i].W[j] = rand() % 100 * 0.01;
 		}
 	}
 }
-
+//*****************计算最后一层隐层的输出******************//
 void BPNetwork::calculateHideToHideOutput(int n, int i)
 {
 	if(i == 0)
@@ -176,6 +180,7 @@ void BPNetwork::calculateHideToHideOutput(int n, int i)
 			{
 				hideLayerOutput[i][n].data[j] += (hideLayerWeight[i][j].W[k] * samples[n][k]);
 			}
+			hideLayerOutput[i][n].data[j] = 1 / (1 + exp(-hideLayerOutput[i][n].data[j]));
 		}
 	}
 	else
@@ -188,11 +193,12 @@ void BPNetwork::calculateHideToHideOutput(int n, int i)
 			{
 				hideLayerOutput[i][n].data[j] += (hideLayerWeight[i][j].W[k] * hideLayerOutput[i - 1][n].data[k]);
 			}
+			hideLayerOutput[i][n].data[j] = 1 / (1 + exp(-hideLayerOutput[i][n].data[j]));
 		}
 	}
 
 }
-
+//*****************计算最后输出层的输出********************//
 void BPNetwork::calculateHideToOutput(int n)
 {
 	for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
@@ -203,9 +209,10 @@ void BPNetwork::calculateHideToOutput(int n)
 		{
 			realOutput[n][j] += (hideToOutputWeight[j].W[k] * hideLayerOutput[bpNetParam.nHideLayers - 1][n].data[k]);
 		}
+		realOutput[n][j] = 1 / (1 + exp(-realOutput[n][j]));
 	}
 }
-
+//*****************规范输出*******************************//
 double BPNetwork::limitValue_0_1(double value)
 {
 	if(value >= 0.9999)
@@ -216,7 +223,7 @@ double BPNetwork::limitValue_0_1(double value)
 
 	return value;
 }
-
+//*****************计算每一层的输出************************//
 void BPNetwork::calculateOutput()
 {
 	for(int n = 0; n < bpNetParam.sampleNum; ++ n)
@@ -232,24 +239,148 @@ void BPNetwork::calculateOutput()
 		{
 			realOutput[n][j] = limitValue_0_1(realOutput[n][j]);
 
-			for(int k = 0; k < bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ k)
-			{
-				hideToOutputLayerDeltaWeight[j].W[k] = (expectOuput[n][j] - realOutput[n][j]) * realOutput[n][j] * (1 - realOutput[n][j]);
-			}
+			hideToOutputDelta[n][j] = (expectOuput[n][j] - realOutput[n][j]) * realOutput[n][j] * (1 - realOutput[n][j]);
 		}
 
 		for(int i = bpNetParam.nHideLayers - 1; i >= 0; -- i)
 		{
 			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
 			{
+				double sum = 0.0;
 				hideLayerOutput[i][n].data[j] = limitValue_0_1(hideLayerOutput[i][n].data[j]);
 
-				//for(int k = 0; k < bpNetParam)
+				if(i == bpNetParam.nHideLayers - 1)
+				{
+					for(int k = 0; k < bpNetParam.nOutPutNodes; ++ k)
+					{
+						sum += hideToOutputWeight[k].W[j] * hideToOutputDelta[n][k];
+					}
+				}
+				else
+				{
+					for(int k = 0; k < bpNetParam.nHideLayerNodes[i + 1]; ++ k)
+					{
+						sum += hideLayerWeight[i + 1][k].W[j] * hideLayerOutputDelta[i + 1][n].data[k];
+					}
+				}
+
+				hideLayerOutputDelta[i][n].data[j] = sum * hideLayerOutput[i][n].data[j] * (1.0 - hideLayerOutput[i][n].data[j]);
 			}
 		}
 	}
 }
+//*****************调整输出层到隐层的链接权值***************//
+void BPNetwork::adjustOutputLayerWeight()
+{
+	double dw = 0.0;
 
+	for(int k = 0; k < bpNetParam.nOutPutNodes; ++ k)
+	{
+		dw = 0;
+		for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+		{
+			dw += hideToOutputDelta[n][k];
+		}
+
+		dw *=  bpNetParam.neda;
+		hideToOutputWeight[k].W[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]] += dw;
+	
+		for(int j = 0; j < bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ j)
+		{
+			dw = 0.0;
+			for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+			{
+				dw += hideToOutputDelta[n][k] * hideLayerOutput[bpNetParam.nHideLayers - 1][n].data[j];
+			}
+
+			dw *= bpNetParam.neda;
+			hideToOutputWeight[k].W[j] += dw;
+		}
+	}
+}
+//*****************调整隐层之间的链接权值*******************//
+void BPNetwork::adjustHideLayerWeight(int i)
+{
+	double dw = 0;
+
+	if(i == 0)
+	{
+		for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
+		{
+			dw = 0.0;
+			for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+			{
+				dw += hideLayerOutputDelta[i][n].data[j];
+			}
+			
+			dw *= bpNetParam.neda;
+			hideLayerWeight[i][j].W[bpNetParam.nInputNodes] += dw;
+
+			for(int k = 0; k < bpNetParam.nInputNodes; ++ k)
+			{
+				dw = 0.0;
+				for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+				{
+					dw += (hideLayerOutputDelta[i][n].data[j] * samples[n][k]);
+				}
+
+				dw *= bpNetParam.neda;
+				hideLayerWeight[i][j].W[k] += dw;
+			}
+		}
+	}
+	else
+	{
+		for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
+		{
+			dw = 0.0;
+			for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+			{
+				dw += hideLayerOutputDelta[i][n].data[j];
+			}
+
+			dw *= bpNetParam.neda;
+			hideLayerWeight[i][j].W[bpNetParam.nHideLayerNodes[i - 1]] += dw;
+
+			for(int k = 0; k < bpNetParam.nHideLayerNodes[i - 1]; ++ k)
+			{
+				dw = 0.0;
+				for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+				{
+					dw += (hideLayerOutputDelta[i][n].data[j] * hideLayerOutput[i - 1][n].data[k]);
+				}
+
+				dw *= bpNetParam.neda;
+				hideLayerWeight[i][j].W[k] += dw;
+			}
+		}
+	}
+}
+//****************调整整个BP网络的权值*********************//
+void BPNetwork::adjustBPWeight()
+{
+	adjustOutputLayerWeight();
+
+	for(int j = bpNetParam.nHideLayers - 1; j >= 0; ++ j)
+	{
+		adjustHideLayerWeight(j);
+	}
+}
+//****************获得误差*********************************//
+double BPNetwork::getError()
+{
+	double error = 0.0;
+	for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+	{
+		for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
+		{
+			error += pow(realOutput[n][j] - expectOuput[n][n], 2);
+		}
+	}
+
+	return error;
+}
+//****************开始训练*********************************//
 void BPNetwork::train(int iteration, double errorLevel)
 {
 	int count = 0;
@@ -260,8 +391,274 @@ void BPNetwork::train(int iteration, double errorLevel)
 	{
 		calculateOutput();
 
-		calculateDelta();
-
 		adjustBPWeight();
+
+		newError = getError();
+		newError /= (bpNetParam.nOutPutNodes * bpNetParam.sampleNum);
+
+		if(count == 0)
+		{
+			oldError = newError;
+		}
+		else
+		{
+			if(oldError > newError)
+			{
+				bpNetParam.neda *= 1.005;
+				oldError		= newError;
+			}
+			else
+			{
+				bpNetParam.neda *= 0.995;
+				oldError		= newError;
+			}
+		}
+
+		if(newError < errorLevel)
+		{
+			break;
+		}
+
+		++ count;
+	}
+}
+//****************预测输入数据*****************************//
+void BPNetwork::predict(vector<vector<double> > &testSample)
+{
+	double sum			= 0.0;
+	int inputSampleNum	= testSample.size();
+	vector<OutputNode> tempHideLayerOutput;
+	vector<double> tempOutputNodes(bpNetParam.nOutPutNodes);
+
+	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+	{
+		OutputNode tempOutputNode;
+		
+		tempOutputNode.data = new double[bpNetParam.nHideLayerNodes[i]];
+
+		tempHideLayerOutput.push_back(tempOutputNode);
+	}
+
+	for(int n = 0; n < inputSampleNum; ++ n)
+	{
+		for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+		{
+			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
+			{
+				sum = 0.0;
+				if(i == 0)
+				{
+					sum = hideLayerWeight[i][j].W[bpNetParam.nInputNodes];
+					for(int k = 0; k < bpNetParam.nInputNodes; ++ k)
+					{
+						sum += hideLayerWeight[i][j].W[k] * testSample[n][k];
+					}
+					tempHideLayerOutput[i].data[j] = 1 / (1 + exp(-sum));
+				}
+				else
+				{
+					sum = hideLayerWeight[i][j].W[bpNetParam.nHideLayerNodes[i - 1]];
+					for(int k = 0; k < bpNetParam.nHideLayerNodes[i - 1]; ++ k)
+					{
+						sum += hideLayerWeight[i][j].W[k] * hideLayerOutput[i - 1][0].data[k];
+					}
+					tempHideLayerOutput[i].data[j] = 1 / (1 + exp(-sum));
+				}
+			}
+		}
+
+		for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
+		{
+			sum = hideToOutputWeight[j].W[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]];
+			for(int k = 0; k < bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ k)
+			{
+				sum += hideToOutputWeight[j].W[k] * tempHideLayerOutput[bpNetParam.nHideLayers - 1].data[k];
+			}
+			tempOutputNodes[j] = 1 / (1 + exp(-sum));
+		}
+
+		for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
+		{
+			cout << tempOutputNodes[j] << " ";
+		}
+		cout << endl;
+	}
+}
+//****************将整个网络保存***************************//
+void BPNetwork::save(string path)
+{
+	ofstream out(path, ios::app);
+
+	out << bpNetParam.nInputNodes << " " << bpNetParam.nOutPutNodes << " " << bpNetParam.nHideLayers << endl;
+
+	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+	{
+		out << bpNetParam.nHideLayerNodes[i] << " ";
+	}
+
+	cout << endl;
+
+	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+	{
+		if(i == 0)
+		{
+			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ i)
+			{
+				for(int k = 0; k <= bpNetParam.nInputNodes; ++ k)
+				{
+					out << hideLayerWeight[i][j].W[k] << " ";
+				}
+
+				out << endl;
+			}
+		}
+		else
+		{
+			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
+			{
+				for(int k = 0; k <= bpNetParam.nHideLayerNodes[i - 1]; ++ k)
+				{
+					out << hideLayerWeight[i][j].W[k] << " ";
+				}
+
+				out << endl;
+			}
+		}
+	}
+
+	for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
+	{
+		for(int k = 0; k <= bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ k)
+		{
+			out << hideToOutputWeight[j].W[k] << " ";
+		}
+
+		out << endl;
+	}
+
+	out.close();
+}
+//****************导入一个BP网络***************************//
+void BPNetwork::load(string path)
+{
+	ifstream in(path, ios::in);
+	
+	if(hideLayerOutput.size() != 0)
+	{
+		clearHideLayerOutputNodes();
+	}
+
+	if(hideLayerWeight.size() != 0)
+	{
+		clearHideToHideWeight();
+	}
+
+	if(hideToOutputWeight.size() != 0)
+	{
+		clearHideToOutputWeight();
+	}
+
+	if(bpNetParam.nHideLayerNodes.size() != 0)
+	{
+		bpNetParam.nHideLayerNodes.clear();
+	}
+
+	in >> bpNetParam.nInputNodes >> bpNetParam.nOutPutNodes >> bpNetParam.nHideLayers;
+
+	int temp;
+	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+	{
+		cin >> temp;
+
+		bpNetParam.nHideLayerNodes.push_back(temp);
+	}
+
+	buildHideToHideWeight();
+	buildHideToOutputWeight();
+
+	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+	{
+		for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
+		{
+			if(i == 0)
+			{
+				for(int k = 0; k <= bpNetParam.nInputNodes; ++ k)
+				{
+					in >> hideLayerWeight[i][j].W[k];
+				}
+			}
+			else
+			{
+				for(int k = 0; k <= bpNetParam.nHideLayerNodes[i - 1]; ++ k)
+				{
+					in >> hideLayerWeight[i][j].W[k];
+				}
+			}
+		}
+	}
+
+	for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
+	{
+		for(int k = 0; k <= bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ k)
+		{
+			in >> hideToOutputWeight[j].W[k];
+		}
+	}
+
+	in.close();
+}
+//****************清空隐层间的输出节点**********************//
+void BPNetwork::clearHideLayerOutputNodes()
+{
+	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+	{
+		for(int j = 0; j < bpNetParam.sampleNum; ++ j)
+		{
+			delete [] hideLayerOutput[i][j].data;
+			delete [] hideLayerOutputDelta[i][j].data;
+		}
+	}
+	hideLayerOutputDelta.clear();
+	hideLayerOutput.clear();
+}
+//****************清空隐层与隐层之间的链接权值***************//
+void BPNetwork::clearHideToHideWeight()
+{
+	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
+	{
+		for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
+		{
+			delete [] hideLayerWeight[i][j].W;
+		}
+	}
+
+	hideLayerWeight.clear();
+}
+//****************清空隐层到输出层间的链接权值***************//
+void BPNetwork::clearHideToOutputWeight()
+{
+	for(int i = 0; i < bpNetParam.nOutPutNodes; ++ i)
+	{
+		delete [] hideToOutputWeight[i].W;
+	}
+
+	hideToOutputWeight.clear();
+}
+
+BPNetwork::~BPNetwork()
+{
+	if(hideLayerOutput.size() != 0)
+	{
+		clearHideLayerOutputNodes();
+	}
+
+	if(hideLayerWeight.size() != 0)
+	{
+		clearHideToHideWeight();
+	}
+
+	if(hideToOutputWeight.size() != 0)
+	{
+		clearHideToOutputWeight();
 	}
 }
