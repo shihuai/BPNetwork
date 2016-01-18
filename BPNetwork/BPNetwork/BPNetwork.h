@@ -14,15 +14,15 @@ typedef struct NetParam{
 	int			nOutPutNodes;
 	int			nHideLayers;
 	vector<int> nHideLayerNodes;
-}BPNetParam;			//BP神经网络结构的参数
+}BPNetParam;						//BP神经网络结构的参数
 
 typedef struct weight{
 	double *W;
-}Weight;				//BP神经网络中的神经元节点之间的权值
+}Weight;							//BP神经网络中的神经元节点之间的权值
 
 typedef struct outputNode{
 	double *data;
-}OutputNode;					//BP网络中每个神经元节点的输出值
+}OutputNode;						//BP网络中每个神经元节点的输出值
 
 class BPNetwork{
 

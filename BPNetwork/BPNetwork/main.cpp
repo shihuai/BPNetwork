@@ -2,19 +2,20 @@
 
 int main()
 {
+#if 1
 	BPNetParam param;
 	int temp;
+	ifstream in("F:\\Github\\BPNetwork\\BPNetwork\\input.txt", ios::in);
 
-	cin >> param.sampleNum >> param.nInputNodes >> param.nOutPutNodes >> param.nHideLayers >> param.neda;
+	in >> param.sampleNum >> param.nInputNodes >> param.nOutPutNodes >> param.nHideLayers >> param.neda;
 
 	for(int i = 0; i < param.nHideLayers; ++ i)
 	{
-		cin >> temp;
+		in >> temp;
 
 		param.nHideLayerNodes.push_back(temp);
 	}
 
-	ifstream in("input.txt", ios::in);
 	vector<vector<double> > inputSample;
 	vector<vector<double> > expectOutput;
 
@@ -24,7 +25,7 @@ int main()
 
 		for(int j = 0; j < param.nInputNodes; ++ j)
 		{
-			cin >> tempInputSample[j];
+			in >> tempInputSample[j];
 		}
 
 		inputSample.push_back(tempInputSample);
@@ -36,7 +37,7 @@ int main()
 
 		for(int j = 0; j < param.nOutPutNodes; ++ j)
 		{
-			cin >> tempExpectOutput[j];
+			in >> tempExpectOutput[j];
 		}
 
 		expectOutput.push_back(tempExpectOutput);
@@ -46,17 +47,26 @@ int main()
 
 	BPNetwork bpNetwork(param, inputSample, expectOutput);
 
-	bpNetwork.train(50, 0.001);
+	bpNetwork.train(500, 0);
+	
+	bpNetwork.save("F:\\BPNetwork.txt");
+#else
 
-	ifstream inTest("ftest.txt", ios::in);
+	BPNetwork bpNetwork;
+
+	bpNetwork.load("F:\\BPNetwork.txt");
+
+#endif
+
+	ifstream inTest("F:\\Github\\BPNetwork\\BPNetwork\\ftest.txt", ios::in);
 	vector<vector<double> > testData;
-	vector<double> vecTemp(param.nInputNodes);
+	vector<double> vecTemp(6);
 	double dTemp;
 	int count = 0;
 
 	while(inTest >> dTemp)
 	{
-		if(count == param.nInputNodes)
+		if(count == 6)
 		{
 			testData.push_back(vecTemp);
 
@@ -68,7 +78,7 @@ int main()
 	}
 
 	inTest.close();
-
+	
 	bpNetwork.predict(testData);
 
 	return 0;

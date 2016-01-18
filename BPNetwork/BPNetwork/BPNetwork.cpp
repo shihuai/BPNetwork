@@ -5,7 +5,8 @@
 BPNetwork::BPNetwork()
 {}
 
-BPNetwork::BPNetwork(BPNetParam &param, vector<vector<double> > &inputSample, vector<vector<double> > &outputValue)
+BPNetwork::BPNetwork(BPNetParam &param, vector<vector<double> > 
+					&inputSample, vector<vector<double> > &outputValue)
 {
 	bpNetParam.sampleNum	= param.sampleNum;
 	bpNetParam.nInputNodes	= param.nInputNodes;
@@ -70,7 +71,7 @@ void BPNetwork::buildHideToHideWeight()
 {
 	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
 	{
-		vector<Weight> tempHideLayerWeight(bpNetParam.nHideLayerNodes[i] + 1);
+		vector<Weight> tempHideLayerWeight(bpNetParam.nHideLayerNodes[i]);
 
 		if(i == 0)
 		{
@@ -215,7 +216,7 @@ void BPNetwork::calculateHideToOutput(int n)
 //*****************规范输出*******************************//
 double BPNetwork::limitValue_0_1(double value)
 {
-	if(value >= 0.9999)
+	if(value > 0.9999)
 		value = 0.9999;
 
 	if(value < 0.0001)
@@ -274,34 +275,34 @@ void BPNetwork::adjustOutputLayerWeight()
 {
 	double dw = 0.0;
 
-	for(int k = 0; k < bpNetParam.nOutPutNodes; ++ k)
+	for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
 	{
-		dw = 0;
+		dw = 0.0;
 		for(int n = 0; n < bpNetParam.sampleNum; ++ n)
 		{
-			dw += hideToOutputDelta[n][k];
+			dw += hideToOutputDelta[n][j];
 		}
 
 		dw *=  bpNetParam.neda;
-		hideToOutputWeight[k].W[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]] += dw;
+		hideToOutputWeight[j].W[bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]] += dw;
 	
-		for(int j = 0; j < bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ j)
+		for(int k = 0; k < bpNetParam.nHideLayerNodes[bpNetParam.nHideLayers - 1]; ++ k)
 		{
 			dw = 0.0;
 			for(int n = 0; n < bpNetParam.sampleNum; ++ n)
 			{
-				dw += hideToOutputDelta[n][k] * hideLayerOutput[bpNetParam.nHideLayers - 1][n].data[j];
+				dw += hideToOutputDelta[n][j] * hideLayerOutput[bpNetParam.nHideLayers - 1][n].data[k];
 			}
 
 			dw *= bpNetParam.neda;
-			hideToOutputWeight[k].W[j] += dw;
+			hideToOutputWeight[j].W[k] += dw;
 		}
 	}
 }
 //*****************调整隐层之间的链接权值*******************//
 void BPNetwork::adjustHideLayerWeight(int i)
 {
-	double dw = 0;
+	double dw = 0.0;
 
 	if(i == 0)
 	{
@@ -361,7 +362,7 @@ void BPNetwork::adjustBPWeight()
 {
 	adjustOutputLayerWeight();
 
-	for(int j = bpNetParam.nHideLayers - 1; j >= 0; ++ j)
+	for(int j = bpNetParam.nHideLayers - 1; j >= 0; --j)
 	{
 		adjustHideLayerWeight(j);
 	}
@@ -374,7 +375,7 @@ double BPNetwork::getError()
 	{
 		for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
 		{
-			error += pow(realOutput[n][j] - expectOuput[n][n], 2);
+			error += pow(realOutput[n][j] - expectOuput[n][j], 2);
 		}
 	}
 
@@ -390,7 +391,6 @@ void BPNetwork::train(int iteration, double errorLevel)
 	while(count < iteration)
 	{
 		calculateOutput();
-
 		adjustBPWeight();
 
 		newError = getError();
@@ -414,13 +414,26 @@ void BPNetwork::train(int iteration, double errorLevel)
 			}
 		}
 
-		if(newError < errorLevel)
+		if(newError == errorLevel)
 		{
 			break;
 		}
 
 		++ count;
 	}
+	cout << count << endl;
+	cout << newError << endl;
+	ofstream out("F:\\temp.txt", ios::app);
+
+	for(int n = 0; n < bpNetParam.sampleNum; ++ n)
+	{
+		for(int i = 0; i < bpNetParam.nOutPutNodes; ++ i)
+		{
+			out << realOutput[n][i] << " ";
+		}
+		out << endl;
+	}
+	out.close();
 }
 //****************预测输入数据*****************************//
 void BPNetwork::predict(vector<vector<double> > &testSample)
@@ -460,7 +473,7 @@ void BPNetwork::predict(vector<vector<double> > &testSample)
 					sum = hideLayerWeight[i][j].W[bpNetParam.nHideLayerNodes[i - 1]];
 					for(int k = 0; k < bpNetParam.nHideLayerNodes[i - 1]; ++ k)
 					{
-						sum += hideLayerWeight[i][j].W[k] * hideLayerOutput[i - 1][0].data[k];
+						sum += hideLayerWeight[i][j].W[k] * tempHideLayerOutput[i - 1].data[k];
 					}
 					tempHideLayerOutput[i].data[j] = 1 / (1 + exp(-sum));
 				}
@@ -502,7 +515,7 @@ void BPNetwork::save(string path)
 	{
 		if(i == 0)
 		{
-			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ i)
+			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
 			{
 				for(int k = 0; k <= bpNetParam.nInputNodes; ++ k)
 				{
@@ -568,7 +581,7 @@ void BPNetwork::load(string path)
 	int temp;
 	for(int i = 0; i < bpNetParam.nHideLayers; ++ i)
 	{
-		cin >> temp;
+		in >> temp;
 
 		bpNetParam.nHideLayerNodes.push_back(temp);
 	}
