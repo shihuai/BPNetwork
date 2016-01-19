@@ -235,7 +235,8 @@ void BPNetwork::calculateOutput()
 		}
 
 		calculateHideToOutput(n);
-
+		
+		//******************计算每个样本在输出层对应的德尔塔值*************//
 		for(int j = 0; j < bpNetParam.nOutPutNodes; ++ j)
 		{
 			realOutput[n][j] = limitValue_0_1(realOutput[n][j]);
@@ -243,6 +244,7 @@ void BPNetwork::calculateOutput()
 			hideToOutputDelta[n][j] = (expectOuput[n][j] - realOutput[n][j]) * realOutput[n][j] * (1 - realOutput[n][j]);
 		}
 
+		//*****************计算每个样本在每个隐层对应的德尔塔值************//
 		for(int i = bpNetParam.nHideLayers - 1; i >= 0; -- i)
 		{
 			for(int j = 0; j < bpNetParam.nHideLayerNodes[i]; ++ j)
@@ -384,9 +386,9 @@ double BPNetwork::getError()
 //****************开始训练*********************************//
 void BPNetwork::train(int iteration, double errorLevel)
 {
-	int count		= 0;
-	double newError = 0.0;
-	double oldError = 0.0;
+	int		count	 = 0;
+	double	newError = 0.0;
+	double	oldError = 0.0;
 
 	while(count < iteration)
 	{

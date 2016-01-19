@@ -11,12 +11,12 @@ const double MAXWEIGHT		= ((float)0.3);
 const double SCALEWEIGHT	= ((float)32767);
 
 typedef struct NetParam{
-	double		neda;
-	int			sampleNum;
-	int			nInputNodes;
-	int			nOutPutNodes;
-	int			nHideLayers;
-	vector<int> nHideLayerNodes;
+	double		neda;				//学习速率
+	int			sampleNum;			//训练样本数量
+	int			nInputNodes;		//输入节点数量
+	int			nOutPutNodes;		//输出节点数量
+	int			nHideLayers;		//隐层层数
+	vector<int> nHideLayerNodes;	//每层隐层的节点数
 }BPNetParam;						//BP神经网络结构的参数
 
 typedef struct weight{
@@ -62,13 +62,13 @@ private:
 	double getError();
 
 private:
-	BPNetParam					bpNetParam;
-	vector<vector<double> >		samples;
-	vector<vector<double> >		expectOuput;
-	vector<vector<double> >		realOutput;
-	vector<vector<double> >		hideToOutputDelta;
-	vector<Weight>				hideToOutputWeight;
-	vector<vector<OutputNode> > hideLayerOutput;
-	vector<vector<OutputNode> > hideLayerOutputDelta;
-	vector<vector<Weight> >		hideLayerWeight;
+	BPNetParam					bpNetParam;					//BP网络的各种参数
+	vector<vector<double> >		samples;					//训练样本集
+	vector<vector<double> >		expectOuput;				//期望输出
+	vector<vector<double> >		realOutput;					//实际输出层输出
+	vector<vector<double> >		hideToOutputDelta;			//最后输出层的德尔塔值
+	vector<Weight>				hideToOutputWeight;			//最后隐层到输出层的链接权值
+	vector<vector<OutputNode> > hideLayerOutput;			//隐层的输出
+	vector<vector<OutputNode> > hideLayerOutputDelta;		//隐层的德尔塔值
+	vector<vector<Weight> >		hideLayerWeight;			//隐层之间的链接权值
 };
