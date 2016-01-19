@@ -2,10 +2,10 @@
 
 int main()
 {
-#if 1
-	BPNetParam param;
 	int temp;
-	ifstream in("F:\\Github\\BPNetwork\\BPNetwork\\input.txt", ios::in);
+#if 0
+	BPNetParam param;
+	ifstream in("F:\\input.txt", ios::in);
 
 	in >> param.sampleNum >> param.nInputNodes >> param.nOutPutNodes >> param.nHideLayers >> param.neda;
 
@@ -39,7 +39,6 @@ int main()
 		{
 			in >> tempExpectOutput[j];
 		}
-
 		expectOutput.push_back(tempExpectOutput);
 	}
 
@@ -47,22 +46,24 @@ int main()
 
 	BPNetwork bpNetwork(param, inputSample, expectOutput);
 
-	bpNetwork.train(500, 0);
-	
-	bpNetwork.save("F:\\BPNetwork.txt");
-#else
+	bpNetwork.train(2000, 1.0e-10);
 
+	bpNetwork.save("F:\\BPNetwork.txt");
+	
+#else	
 	BPNetwork bpNetwork;
 
 	bpNetwork.load("F:\\BPNetwork.txt");
 
 #endif
 
-	ifstream inTest("F:\\Github\\BPNetwork\\BPNetwork\\ftest.txt", ios::in);
+	ifstream inTest("F:\\ftest.txt", ios::in);
 	vector<vector<double> > testData;
 	vector<double> vecTemp(6);
 	double dTemp;
 	int count = 0;
+	
+	inTest >> temp;
 
 	while(inTest >> dTemp)
 	{
@@ -72,13 +73,15 @@ int main()
 
 			count = 0;
 			vecTemp[count ++] = dTemp;
+
+			continue;
 		}
 
 		vecTemp[count ++] = dTemp;
 	}
 
 	inTest.close();
-	
+
 	bpNetwork.predict(testData);
 
 	return 0;

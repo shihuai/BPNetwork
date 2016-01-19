@@ -7,6 +7,9 @@
 
 using namespace std;
 
+const double MAXWEIGHT		= ((float)0.3);
+const double SCALEWEIGHT	= ((float)32767);
+
 typedef struct NetParam{
 	double		neda;
 	int			sampleNum;
